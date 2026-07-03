@@ -63,6 +63,14 @@ canvas{display:block}
 #placard .m{color:var(--faint);font-size:.75rem;letter-spacing:.14em;margin-top:.4rem;text-transform:uppercase}
 #placard .p{color:var(--accent);font-family:'Cormorant Garamond',serif;font-size:1.3rem;margin-top:.4rem}
 #placard .x{color:var(--faint);font-size:.6rem;letter-spacing:.3em;margin-top:.9rem;text-transform:uppercase}
+#placard .order{
+  display:inline-flex;align-items:center;gap:.5rem;margin-top:1rem;pointer-events:auto;
+  background:#1f8f5a;color:#fff;text-decoration:none;
+  font-size:.68rem;letter-spacing:.22em;text-transform:uppercase;padding:.75rem 1.5rem;
+  transition:background .3s;
+}
+#placard .order:hover{background:#25a869}
+#placard.show{pointer-events:auto}
 
 @media (max-width:640px){
   .hud .brand span.badge{display:none}
@@ -90,6 +98,10 @@ canvas{display:block}
 <div id="progress"><i></i></div>
 <div id="placard">
   <div class="t"></div><div class="m"></div><div class="p"></div>
+  <a class="order" id="orderLink" target="_blank" rel="noopener">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm5.4 14.1c-.2.7-1.3 1.3-1.8 1.3-.5.1-1 .2-3.3-.7-2.8-1.1-4.6-4-4.7-4.2-.1-.2-1.1-1.5-1.1-2.9s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.4l.9 2.2c.1.2.1.4 0 .6l-.4.6-.5.5c-.1.2-.3.3-.1.6.2.3.8 1.4 1.8 2.2 1.2 1.1 2.3 1.4 2.6 1.6.3.1.5.1.7-.1l1-1.2c.2-.3.4-.2.7-.1l2.1 1c.3.2.5.3.6.4 0 .1 0 .7-.3 1.4z"/></svg>
+    Order this piece
+  </a>
   <div class="x">Click anywhere · Esc to step back</div>
 </div>
 
@@ -146,7 +158,41 @@ manager.onLoad = () => setTimeout(()=>document.getElementById('loader').classLis
 const texLoader = new THREE.TextureLoader(manager);
 
 /* ---------- materials & env ---------- */
-const wallMat = new THREE.MeshStandardMaterial({color:0x191715, roughness:.94, metalness:0});
+/* procedural plaster texture so walls aren't flat planes */
+function plasterTexture(){
+  const c = document.createElement('canvas'); c.width=c.height=512;
+  const x = c.getContext('2d');
+  x.fillStyle='#191715'; x.fillRect(0,0,512,512);
+  for(let i=0;i<14000;i++){
+    const g = 18 + Math.random()*16;
+    x.fillStyle = `rgba(${g+8},${g+5},${g},${Math.random()*.5})`;
+    x.fillRect(Math.random()*512, Math.random()*512, 1.5, 1.5);
+  }
+  // faint vertical trowel streaks
+  for(let i=0;i<40;i++){
+    x.strokeStyle = `rgba(255,250,240,${Math.random()*.015})`;
+    x.lineWidth = 6+Math.random()*20;
+    const px = Math.random()*512;
+    x.beginPath(); x.moveTo(px,0); x.lineTo(px+(Math.random()-.5)*40,512); x.stroke();
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+const wallTex = plasterTexture(); wallTex.repeat.set(8,2);
+const wallMat = new THREE.MeshStandardMaterial({map:wallTex, color:0xffffff, roughness:.94, metalness:0});
+/* gradient texture so the light cones fade instead of hard-edge */
+function coneTexture(){
+  const c = document.createElement('canvas'); c.width=8; c.height=256;
+  const x = c.getContext('2d');
+  const g = x.createLinearGradient(0,0,0,256);
+  g.addColorStop(0,'rgba(255,248,230,.55)');
+  g.addColorStop(.55,'rgba(255,248,230,.12)');
+  g.addColorStop(1,'rgba(255,248,230,0)');
+  x.fillStyle=g; x.fillRect(0,0,8,256);
+  return new THREE.CanvasTexture(c);
+}
+const coneTex = coneTexture();
 const floorMat = new THREE.MeshStandardMaterial({color:0x0d0c0b, roughness:.32, metalness:.35});
 const ceilMat = new THREE.MeshStandardMaterial({color:0x0a0908, roughness:1});
 
@@ -211,12 +257,23 @@ WORKS.forEach((w, i) => {
     new THREE.MeshBasicMaterial({color:0xece7dd, transparent:true, opacity:.045, blending:THREE.AdditiveBlending, depthWrite:false}));
   halo.position.z = -.05; g.add(halo);
 
-  // fake volumetric light cone from ceiling
+  // volumetric light cone with gradient fade, from a visible ceiling fixture
   const coneH = WALL_H - 3.6;
   const cone = new THREE.Mesh(new THREE.ConeGeometry(1.7, coneH, 24, 1, true),
-    new THREE.MeshBasicMaterial({color:0xd8cfbe, transparent:true, opacity:.05, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide}));
+    new THREE.MeshBasicMaterial({map:coneTex, transparent:true, opacity:.32, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide}));
   cone.position.set(0, PH/2 + coneH/2 - .4, .5);
   g.add(cone);
+  // ceiling fixture: track stem + housing + glowing lens
+  const fixY = PH/2 + coneH - .35;
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(.025,.025,.5,8),
+    new THREE.MeshStandardMaterial({color:0x0a0a0a, roughness:.4, metalness:.8}));
+  stem.position.set(0, fixY+.42, .5); g.add(stem);
+  const housing = new THREE.Mesh(new THREE.CylinderGeometry(.09,.13,.28,16),
+    new THREE.MeshStandardMaterial({color:0x111110, roughness:.35, metalness:.85}));
+  housing.position.set(0, fixY+.12, .5); housing.rotation.x = .28; g.add(housing);
+  const lens = new THREE.Mesh(new THREE.CircleGeometry(.09,16),
+    new THREE.MeshBasicMaterial({color:0xfff3d8}));
+  lens.position.set(0, fixY-.03, .53); lens.rotation.x = -Math.PI/2+.28; g.add(lens);
 
   // point light in front of painting
   const pl = new THREE.PointLight(0xf0e8d8, .85, 6.5, 2);
@@ -279,7 +336,7 @@ function bump(){ hint.classList.add('gone'); }
 
 addEventListener('wheel', e=>{
   if(focused>=0) return;
-  targetZ -= e.deltaY * .012;
+  targetZ -= e.deltaY * .02;
   clampTarget(); bump();
 },{passive:true});
 
@@ -322,12 +379,19 @@ addEventListener('click', e=>{
 });
 
 const placard = document.getElementById('placard');
+const WHATSAPP_NUMBER = "96181691382";
 function focus(i){
   focused = i;
   const d = paintings[i].data;
   placard.querySelector('.t').textContent = d.title;
   placard.querySelector('.m').textContent = d.medium;
   placard.querySelector('.p').textContent = d.price;
+  const ord = document.getElementById('orderLink');
+  if(d.price === 'Sold'){ ord.style.display='none'; }
+  else{
+    ord.style.display='inline-flex';
+    ord.href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hello Youmna! I'd love to order "${d.title}" (${d.price}) — I saw it in your 3D gallery.`)}`;
+  }
   placard.classList.add('show');
   bump();
 }

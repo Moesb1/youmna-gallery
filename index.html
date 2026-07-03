@@ -8,6 +8,9 @@
 <meta property="og:title" content="Art with Youmna — Original Paintings">
 <meta property="og:description" content="Original hand-painted works in black and white. One of a kind.">
 <meta property="og:type" content="website">
+<meta property="og:image" content="https://moesb1.github.io/youmna-gallery/07-monolith.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://moesb1.github.io/youmna-gallery/07-monolith.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
@@ -82,27 +85,59 @@ nav.scrolled{background:rgba(14,13,12,.94);border-bottom:1px solid var(--line);b
 
 /* ---------- hero ---------- */
 .hero{
-  min-height:100svh;display:flex;flex-direction:column;justify-content:center;align-items:center;
-  text-align:center;position:relative;padding:6rem 1.5rem 4rem;
+  min-height:100svh;display:flex;align-items:center;
+  position:relative;padding:7rem clamp(1.2rem,5vw,4rem) 4rem;
   background:
-    radial-gradient(ellipse 70% 45% at 50% 38%, rgba(236,231,221,.055), transparent 70%),
+    radial-gradient(ellipse 55% 60% at 72% 45%, rgba(236,231,221,.06), transparent 70%),
     var(--ink);
+  overflow:hidden;
+}
+.hero-grid{
+  max-width:1250px;margin:0 auto;width:100%;
+  display:grid;grid-template-columns:1.05fr .95fr;
+  gap:clamp(2rem,6vw,5.5rem);align-items:center;
 }
 .hero-kicker{
   font-size:.72rem;letter-spacing:.4em;text-transform:uppercase;color:var(--accent);
-  margin-bottom:2.2rem;
+  margin-bottom:2rem;
 }
 .hero h1{
   font-family:var(--serif);font-weight:400;
-  font-size:clamp(3rem,10vw,7.5rem);
-  line-height:1.02;letter-spacing:-.01em;
+  font-size:clamp(2.6rem,6.2vw,5.2rem);
+  line-height:1.04;letter-spacing:-.01em;
 }
 .hero h1 em{font-style:italic;color:var(--cream-dim)}
 .hero-sub{
-  margin-top:2.4rem;max-width:34rem;color:var(--cream-dim);
+  margin-top:2.2rem;max-width:30rem;color:var(--cream-dim);
   font-size:clamp(.95rem,1.4vw,1.05rem);line-height:1.8;
 }
-.hero-cta{margin-top:3rem;display:flex;gap:1rem;flex-wrap:wrap;justify-content:center}
+.hero-cta{margin-top:2.8rem;display:flex;gap:1rem;flex-wrap:wrap}
+/* hero artwork — clip-path reveal + slow drift */
+.hero-art{position:relative;justify-self:end;width:min(420px,42vw)}
+.hero-art .ha-frame{
+  background:#f4f1ea;padding:4.2%;
+  box-shadow:0 30px 70px -18px rgba(0,0,0,.85), 0 8px 20px rgba(0,0,0,.5);
+  border:1px solid rgba(0,0,0,.6);
+  clip-path:inset(0 0 100% 0);
+  animation:haReveal 1.4s cubic-bezier(.65,0,.2,1) .35s forwards;
+}
+.hero-art img{width:100%;display:block;transform:scale(1.12);
+  animation:haSettle 2.6s cubic-bezier(.2,.7,.2,1) .35s forwards}
+@keyframes haReveal{to{clip-path:inset(0 0 0 0)}}
+@keyframes haSettle{to{transform:scale(1)}}
+.hero-art .ha-caption{
+  position:absolute;left:-1.4rem;bottom:1.8rem;transform:rotate(180deg);
+  writing-mode:vertical-rl;font-size:.62rem;letter-spacing:.3em;text-transform:uppercase;
+  color:var(--cream-faint);
+}
+.hero-art .ha-wash{ /* spotlight wash behind */
+  position:absolute;inset:-18% -22%;z-index:-1;
+  background:radial-gradient(ellipse at 50% 35%, rgba(236,231,221,.09), transparent 65%);
+}
+@media (prefers-reduced-motion:reduce){
+  .hero-art .ha-frame{clip-path:none;animation:none}
+  .hero-art img{transform:none;animation:none}
+}
 .btn{
   display:inline-block;text-decoration:none;cursor:pointer;
   font-family:var(--sans);font-size:.72rem;letter-spacing:.24em;text-transform:uppercase;
@@ -133,9 +168,19 @@ section{padding:clamp(4rem,9vw,8rem) clamp(1.2rem,5vw,4rem)}
   max-width:1200px;margin:0 auto;
   display:grid;grid-template-columns:repeat(6,1fr);
   gap:clamp(2.5rem,5vw,4.5rem) clamp(1.5rem,3vw,3rem);
+  align-items:start;
 }
 .work{grid-column:span 2;display:flex;flex-direction:column}
-.work:nth-child(6n+1),.work:nth-child(6n+2){grid-column:span 3}
+/* broken, asymmetric rhythm — one oversized piece, offsets create tension */
+.work:nth-child(1){grid-column:span 4}
+.work:nth-child(2){grid-column:span 2;margin-top:clamp(2rem,6vw,5rem)}
+.work:nth-child(3){grid-column:span 2;margin-top:clamp(1rem,3vw,2.5rem)}
+.work:nth-child(4){grid-column:span 2}
+.work:nth-child(5){grid-column:span 2;margin-top:clamp(2rem,5vw,4rem)}
+.work:nth-child(6){grid-column:span 3;margin-top:clamp(1rem,3vw,2.5rem)}
+.work:nth-child(7){grid-column:span 3}
+.work:nth-child(8){grid-column:span 2;margin-top:clamp(1.5rem,4vw,3rem)}
+.work:nth-child(9){grid-column:4/span 3;margin-top:clamp(-1rem,-2vw,-2rem)}
 .frame{
   position:relative;cursor:zoom-in;
   background:
@@ -286,9 +331,13 @@ footer a:hover{color:var(--accent)}
 }
 .toast.show{transform:translate(-50%,0);visibility:visible}
 
-/* ---------- reveal on scroll ---------- */
+/* ---------- reveal on scroll (choreographed) ---------- */
 .rv{opacity:1;transform:none}
-.js .rv{opacity:0;transform:translateY(26px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.8,.2,1)}
+.js .rv{opacity:0;transform:translateY(30px);
+  transition:opacity .9s ease var(--d,0s), transform .9s cubic-bezier(.2,.8,.2,1) var(--d,0s)}
+.js .work.rv{transform:translateY(46px) scale(.985)}
+.js .work.rv:nth-child(even){transform:translateY(60px) scale(.985)}
+.js .section-head.rv{transform:translateY(20px)}
 .js .rv.in{opacity:1;transform:none}
 @media (prefers-reduced-motion: reduce){
   .js .rv{opacity:1;transform:none;transition:none}
@@ -296,11 +345,18 @@ footer a:hover{color:var(--accent)}
 }
 
 @media (max-width:820px){
+  .hero{padding-top:6rem}
+  .hero-grid{grid-template-columns:1fr;gap:2.5rem}
+  .hero-art{justify-self:center;width:min(320px,78vw)}
+  .hero-art .ha-caption{left:auto;right:-1.3rem}
   .works{grid-template-columns:1fr 1fr;gap:2.5rem 1.2rem}
-  .work,.work:nth-child(6n+1),.work:nth-child(6n+2){grid-column:span 2}
+  .work:nth-child(n){grid-column:span 2;margin-top:0}
   .about-grid{grid-template-columns:1fr}
   .nav-links li.hide-m{display:none}
 }
+/* ---------- ink cursor trail ---------- */
+#inkTrail{position:fixed;inset:0;z-index:1500;pointer-events:none}
+@media (pointer:coarse), (prefers-reduced-motion:reduce){ #inkTrail{display:none} }
 </style>
 </head>
 <body>
@@ -317,6 +373,7 @@ footer a:hover{color:var(--accent)}
   <ul class="nav-links">
     <li class="hide-m"><a href="#gallery">Collection</a></li>
     <li class="hide-m"><a href="#about">The Artist</a></li>
+    <li class="hide-m"><a href="3d.html" style="color:var(--accent)">3D Gallery</a></li>
     <li>
       <button class="cart-btn" id="cartBtn">Order
         <span class="cart-count" id="cartCount">0</span>
@@ -326,13 +383,22 @@ footer a:hover{color:var(--accent)}
 </nav>
 
 <header class="hero" id="top">
-  <p class="hero-kicker rv">Original paintings · one of one</p>
-  <h1 class="rv">Painted in silence,<br><em>heard in feeling.</em></h1>
-  <p class="hero-sub rv">I'm Youmna — a painter with a guitarist's ear for mood. Every canvas is
-    hand-painted in black, white, and everything felt in between. Signed, one of a kind, ready to hang.</p>
-  <div class="hero-cta rv">
-    <a class="btn btn-solid" href="#gallery">View the collection</a>
-    <a class="btn btn-ghost" href="#about">Meet the artist</a>
+  <div class="hero-grid">
+    <div class="hero-text">
+      <p class="hero-kicker rv">Original paintings · one of one</p>
+      <h1 class="rv">Painted in silence,<br><em>heard in feeling.</em></h1>
+      <p class="hero-sub rv">I'm Youmna — a painter with a guitarist's ear for mood. Every canvas is
+        hand-painted in black, white, and everything felt in between. Signed, one of a kind, ready to hang.</p>
+      <div class="hero-cta rv">
+        <a class="btn btn-solid" href="#gallery">View the collection</a>
+        <a class="btn btn-ghost" href="3d.html">Walk the 3D gallery</a>
+      </div>
+    </div>
+    <div class="hero-art" id="heroArt">
+      <div class="ha-wash"></div>
+      <div class="ha-frame"><img src="07-monolith.jpg" alt="Sustain — ink on canvas"></div>
+      <span class="ha-caption">Sustain · ink on canvas · 2025</span>
+    </div>
   </div>
   <span class="hero-scroll">Scroll</span>
 </header>
@@ -470,11 +536,59 @@ worksEl.innerHTML = WORKS.map(w => `
     </div>
   </article>`).join('');
 
-/* ---- reveal on scroll ---- */
+/* ---- reveal on scroll (staggered per row) ---- */
+document.querySelectorAll('.hero-text .rv').forEach((el,i)=> el.style.setProperty('--d', (i*.14)+'s'));
+document.querySelectorAll('.work.rv').forEach((el,i)=> el.style.setProperty('--d', ((i%3)*.12)+'s'));
 const io = new IntersectionObserver(es => es.forEach(e => {
   if(e.isIntersecting){e.target.classList.add('in'); io.unobserve(e.target);}
 }), {threshold:.12, rootMargin:'0px 0px -40px 0px'});
 document.querySelectorAll('.rv').forEach(el => io.observe(el));
+
+/* ---- hero art parallax ---- */
+const heroArt = document.getElementById('heroArt');
+if(heroArt && matchMedia('(prefers-reduced-motion: no-preference)').matches){
+  addEventListener('scroll', ()=>{
+    const y = Math.min(scrollY, innerHeight);
+    heroArt.style.transform = `translateY(${y*.12}px)`;
+  }, {passive:true});
+  addEventListener('mousemove', e=>{
+    const dx = (e.clientX/innerWidth-.5), dy = (e.clientY/innerHeight-.5);
+    heroArt.style.setProperty('rotate', `${dx*1.2}deg`);
+  }, {passive:true});
+}
+
+/* ---- ink cursor trail ---- */
+(function(){
+  if(!matchMedia('(pointer:fine)').matches || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = document.createElement('canvas'); c.id='inkTrail'; document.body.appendChild(c);
+  const x = c.getContext('2d');
+  let W,H; const fit=()=>{W=c.width=innerWidth*devicePixelRatio;H=c.height=innerHeight*devicePixelRatio;
+    c.style.width=innerWidth+'px';c.style.height=innerHeight+'px';};
+  fit(); addEventListener('resize', fit);
+  let last=null;
+  const jit = ()=> (Math.random()-.5)*3*devicePixelRatio;
+  addEventListener('mousemove', e=>{
+    const p = {x:e.clientX*devicePixelRatio, y:e.clientY*devicePixelRatio};
+    if(last){
+      const d = Math.hypot(p.x-last.x, p.y-last.y);
+      if(d>2){
+        const w = Math.max(.6, Math.min(4.5, 26/d)) * devicePixelRatio; // fast = thin, slow = thick (like a loaded brush)
+        x.strokeStyle='rgba(236,231,221,.5)'; x.lineCap='round';
+        for(let b=0;b<3;b++){ // three bristles
+          x.lineWidth = w*(1-b*.3);
+          x.beginPath(); x.moveTo(last.x+jit(), last.y+jit()); x.lineTo(p.x+jit(), p.y+jit()); x.stroke();
+        }
+      }
+    }
+    last=p;
+  }, {passive:true});
+  (function fade(){ // ink slowly sinks into the paper
+    x.globalCompositeOperation='destination-out';
+    x.fillStyle='rgba(0,0,0,.06)'; x.fillRect(0,0,W,H);
+    x.globalCompositeOperation='source-over';
+    requestAnimationFrame(fade);
+  })();
+})();
 
 /* ---- nav bg ---- */
 addEventListener('scroll', () => $('nav').classList.toggle('scrolled', scrollY > 40), {passive:true});
