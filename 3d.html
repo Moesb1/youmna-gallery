@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Art with Youmna — 3D Gallery</title>
+<meta name="description" content="Walk through Youmna's paintings in a 3D gallery.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital@0;1&family=Jost:wght@300;400&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#0e0d0c;--cream:#ece7dd;--dim:#b7b0a3;--faint:#7d786e;--accent:#c9a96a}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden}
+body{background:var(--ink);font-family:'Jost',sans-serif;color:var(--cream);
+  -webkit-font-smoothing:antialiased;cursor:grab}
+body.dragging{cursor:grabbing}
+canvas{display:block}
+
+/* grain + vignette */
+.fx{position:fixed;inset:0;pointer-events:none;z-index:5}
+.fx.vignette{background:radial-gradient(ellipse 90% 80% at 50% 45%, transparent 55%, rgba(0,0,0,.55) 100%)}
+.fx.grain{opacity:.06;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation:gr 7s steps(10) infinite}
+@keyframes gr{0%,100%{transform:translate(0,0)}25%{transform:translate(-2%,2%)}50%{transform:translate(2%,-2%)}75%{transform:translate(-1%,-2%)}}
+
+/* loader */
+#loader{position:fixed;inset:0;z-index:50;background:var(--ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1.6rem;
+  transition:opacity .9s ease, visibility .9s}
+#loader.done{opacity:0;visibility:hidden}
+#loader svg{width:110px;height:110px;animation:spin 14s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#loader .t{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.5rem;color:var(--dim)}
+#bar{width:180px;height:1px;background:rgba(236,231,221,.15);position:relative;overflow:hidden}
+#bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--accent);transition:width .3s}
+
+/* HUD */
+.hud{position:fixed;z-index:10;pointer-events:none}
+.hud.top{top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:center;
+  padding:1.3rem 1.8rem}
+.hud .brand{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.25rem;
+  pointer-events:auto;color:var(--cream);text-decoration:none;display:flex;gap:.6rem;align-items:center}
+.hud .brand span.badge{font-family:'Jost';font-style:normal;font-size:.58rem;letter-spacing:.3em;
+  color:var(--accent);border:1px solid rgba(201,169,106,.4);padding:.25rem .6rem;text-transform:uppercase}
+.hud .back{pointer-events:auto;color:var(--faint);text-decoration:none;font-size:.68rem;
+  letter-spacing:.28em;text-transform:uppercase;transition:color .3s}
+.hud .back:hover{color:var(--cream)}
+.hint{position:fixed;bottom:1.6rem;left:50%;transform:translateX(-50%);z-index:10;
+  font-size:.65rem;letter-spacing:.32em;text-transform:uppercase;color:var(--faint);
+  transition:opacity 1s;pointer-events:none;text-align:center;line-height:2}
+.hint.gone{opacity:0}
+#progress{position:fixed;right:1.8rem;top:50%;transform:translateY(-50%);z-index:10;
+  width:1px;height:180px;background:rgba(236,231,221,.14)}
+#progress i{position:absolute;top:0;left:-1px;width:3px;background:var(--accent);height:0%}
+
+/* placard overlay when focused */
+#placard{position:fixed;left:50%;bottom:3.2rem;transform:translate(-50%,30px);z-index:10;
+  text-align:center;opacity:0;transition:opacity .5s ease, transform .5s ease;pointer-events:none}
+#placard.show{opacity:1;transform:translate(-50%,0)}
+#placard .t{font-family:'Cormorant Garamond',serif;font-style:italic;font-size:1.9rem}
+#placard .m{color:var(--faint);font-size:.75rem;letter-spacing:.14em;margin-top:.4rem;text-transform:uppercase}
+#placard .p{color:var(--accent);font-family:'Cormorant Garamond',serif;font-size:1.3rem;margin-top:.4rem}
+#placard .x{color:var(--faint);font-size:.6rem;letter-spacing:.3em;margin-top:.9rem;text-transform:uppercase}
+
+@media (max-width:640px){
+  .hud .brand span.badge{display:none}
+  #progress{display:none}
+}
+</style>
+</head>
+<body>
+
+<div id="loader">
+  <svg viewBox="0 0 300 300">
+    <circle cx="150" cy="150" r="140" fill="none" stroke="#ece7dd" stroke-width="1.2"/>
+    <circle cx="150" cy="150" r="132" fill="none" stroke="#ece7dd" stroke-width=".5" opacity=".45"/>
+    <text x="150" y="172" font-family="Cormorant Garamond, Georgia, serif" font-style="italic" font-size="86" fill="#ece7dd" text-anchor="middle">Y</text>
+  </svg>
+  <div class="t">Hanging the paintings…</div>
+  <div id="bar"><i></i></div>
+</div>
+
+<div class="hud top">
+  <a class="brand" href="index.html">Art with Youmna <span class="badge">3D Experience</span></a>
+  <a class="back" href="index.html">← Classic site</a>
+</div>
+<div class="hint" id="hint">Scroll or drag to walk · click a painting to focus</div>
+<div id="progress"><i></i></div>
+<div id="placard">
+  <div class="t"></div><div class="m"></div><div class="p"></div>
+  <div class="x">Click anywhere · Esc to step back</div>
+</div>
+
+<div class="fx vignette"></div>
+<div class="fx grain"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const WORKS = [
+  {img:"01-nocturne.jpg", title:"Nocturne No.1",     medium:"Ink on canvas · 40 × 50 cm · 2025", price:"$150"},
+  {img:"02-enso.jpg",     title:"Circle, Unfinished",medium:"Ink on paper · 35 × 45 cm · 2025",  price:"$130"},
+  {img:"03-rain.jpg",     title:"Tremolo",           medium:"Graphite & ink · 30 × 40 cm · 2025",price:"$110"},
+  {img:"04-crossing.jpg", title:"Duet",              medium:"Ink on paper · 35 × 45 cm · 2024",  price:"Sold"},
+  {img:"05-horizon.jpg",  title:"Field at Rest",     medium:"Graphite on paper · 40 × 50 cm · 2025",price:"$145"},
+  {img:"06-ridge.jpg",    title:"Ridge Line",        medium:"Graphite on paper · 30 × 40 cm · 2024",price:"$115"},
+  {img:"07-monolith.jpg", title:"Sustain",           medium:"Ink on canvas · 45 × 60 cm · 2025", price:"$160"},
+  {img:"08-tangle.jpg",   title:"Improvisation",     medium:"Ink on paper · 35 × 45 cm · 2025",  price:"$120"},
+  {img:"09-rooms.jpg",    title:"Quiet Rooms",       medium:"Graphite on paper · 40 × 50 cm · 2024",price:"$140"},
+];
+
+const SPACING = 7.5;              // distance between paintings along corridor
+const HALL_W = 9;                 // corridor width
+const WALL_H = 7.5;
+const START_Z = 6;
+const END_Z = -(WORKS.length-1)*SPACING - 10;
+
+let scene, camera, renderer, clock;
+let targetZ = START_Z, curZ = START_Z;
+let yaw = 0, pitch = 0, tYaw = 0, tPitch = 0;
+let focused = -1, focusT = 0;      // painting focus animation
+const paintings = [];             // {group, mesh, data, z, side}
+let dust;
+
+/* ---------- setup ---------- */
+scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x0c0b0a, 0.045);
+camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, .1, 80);
+camera.position.set(0, 2.1, START_Z);
+
+renderer = new THREE.WebGLRenderer({antialias:true, powerPreference:'high-performance'});
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+document.body.appendChild(renderer.domElement);
+clock = new THREE.Clock();
+
+/* ---------- loading manager ---------- */
+const manager = new THREE.LoadingManager();
+const barEl = document.querySelector('#bar i');
+manager.onProgress = (u, l, t) => barEl.style.width = (l/t*100)+'%';
+manager.onLoad = () => setTimeout(()=>document.getElementById('loader').classList.add('done'), 400);
+const texLoader = new THREE.TextureLoader(manager);
+
+/* ---------- materials & env ---------- */
+const wallMat = new THREE.MeshStandardMaterial({color:0x191715, roughness:.94, metalness:0});
+const floorMat = new THREE.MeshStandardMaterial({color:0x0d0c0b, roughness:.32, metalness:.35});
+const ceilMat = new THREE.MeshStandardMaterial({color:0x0a0908, roughness:1});
+
+const hallLen = START_Z - END_Z + 30;
+const hallMidZ = (START_Z + END_Z)/2;
+
+function plane(w,h,mat){ return new THREE.Mesh(new THREE.PlaneGeometry(w,h), mat); }
+
+const floor = plane(HALL_W, hallLen, floorMat);
+floor.rotation.x = -Math.PI/2; floor.position.set(0,0,hallMidZ); scene.add(floor);
+const ceil = plane(HALL_W, hallLen, ceilMat);
+ceil.rotation.x = Math.PI/2; ceil.position.set(0,WALL_H,hallMidZ); scene.add(ceil);
+const wallL = plane(hallLen, WALL_H, wallMat);
+wallL.rotation.y = Math.PI/2; wallL.position.set(-HALL_W/2, WALL_H/2, hallMidZ); scene.add(wallL);
+const wallR = plane(hallLen, WALL_H, wallMat);
+wallR.rotation.y = -Math.PI/2; wallR.position.set(HALL_W/2, WALL_H/2, hallMidZ); scene.add(wallR);
+const wallEnd = plane(HALL_W, WALL_H, wallMat);
+wallEnd.position.set(0, WALL_H/2, END_Z-14); scene.add(wallEnd);
+
+/* baseboard glow strips along floor edges */
+const stripMat = new THREE.MeshBasicMaterial({color:0x2a2620});
+[-1,1].forEach(s=>{
+  const strip = new THREE.Mesh(new THREE.BoxGeometry(.06,.12,hallLen), stripMat);
+  strip.position.set(s*(HALL_W/2-.03), .06, hallMidZ); scene.add(strip);
+});
+
+/* lights */
+scene.add(new THREE.AmbientLight(0x8f867a, .16));
+const camLight = new THREE.PointLight(0xece7dd, .5, 14, 2);
+scene.add(camLight);
+/* far cool light at end of hall for depth */
+const endLight = new THREE.PointLight(0x8fa0b8, .8, 40, 2);
+endLight.position.set(0, 4, END_Z-8); scene.add(endLight);
+
+/* ---------- paintings ---------- */
+const frameMat = new THREE.MeshStandardMaterial({color:0x241f19, roughness:.5, metalness:.4});
+const matteMat = new THREE.MeshStandardMaterial({color:0xf4f1ea, roughness:.9});
+
+WORKS.forEach((w, i) => {
+  const side = i%2===0 ? -1 : 1;             // alternate walls
+  const z = -i*SPACING;
+  const g = new THREE.Group();
+
+  const tex = texLoader.load(w.img);
+  tex.encoding = THREE.sRGBEncoding;
+  tex.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+  const PW = 2.5, PH = PW*4/3;
+  // frame
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(PW+.34, PH+.34, .12), frameMat);
+  g.add(frame);
+  // matte
+  const matte = new THREE.Mesh(new THREE.PlaneGeometry(PW+.18, PH+.18), matteMat);
+  matte.position.z = .065; g.add(matte);
+  // artwork — basic material so it pops in the dark
+  const art = new THREE.Mesh(new THREE.PlaneGeometry(PW, PH),
+    new THREE.MeshBasicMaterial({map:tex}));
+  art.position.z = .07; g.add(art);
+
+  // soft halo behind frame (fake wall wash)
+  const halo = new THREE.Mesh(new THREE.PlaneGeometry(PW*2.6, PH*2.2),
+    new THREE.MeshBasicMaterial({color:0xece7dd, transparent:true, opacity:.045, blending:THREE.AdditiveBlending, depthWrite:false}));
+  halo.position.z = -.05; g.add(halo);
+
+  // fake volumetric light cone from ceiling
+  const coneH = WALL_H - 3.6;
+  const cone = new THREE.Mesh(new THREE.ConeGeometry(1.7, coneH, 24, 1, true),
+    new THREE.MeshBasicMaterial({color:0xd8cfbe, transparent:true, opacity:.05, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide}));
+  cone.position.set(0, PH/2 + coneH/2 - .4, .5);
+  g.add(cone);
+
+  // point light in front of painting
+  const pl = new THREE.PointLight(0xf0e8d8, .85, 6.5, 2);
+  pl.position.set(0, .8, 1.6); g.add(pl);
+
+  g.position.set(side*(HALL_W/2-.09), 3.1, z);
+  g.rotation.y = side===-1 ? Math.PI/2 : -Math.PI/2;
+  scene.add(g);
+
+  // mirror reflection on floor (cheap): flipped clone, faded
+  const rg = new THREE.Group();
+  const rArt = art.clone(); rArt.material = new THREE.MeshBasicMaterial({map:tex, transparent:true, opacity:.10, depthWrite:false});
+  const rFrame = new THREE.Mesh(frame.geometry, new THREE.MeshBasicMaterial({color:0x241f19, transparent:true, opacity:.08, depthWrite:false}));
+  rg.add(rFrame); rArt.position.z=.07; rg.add(rArt);
+  rg.position.set(g.position.x, -3.1, z);
+  rg.rotation.y = g.rotation.y; rg.scale.y = -1;
+  scene.add(rg);
+
+  paintings.push({group:g, art, data:w, z, side, idx:i});
+});
+
+/* ---------- end wall emblem ---------- */
+(function(){
+  const c = document.createElement('canvas'); c.width=c.height=512;
+  const x = c.getContext('2d');
+  x.strokeStyle='#ece7dd'; x.lineWidth=3;
+  x.beginPath(); x.arc(256,256,225,0,Math.PI*2); x.stroke();
+  x.lineWidth=1; x.globalAlpha=.5;
+  x.beginPath(); x.arc(256,256,208,0,Math.PI*2); x.stroke();
+  x.globalAlpha=1; x.fillStyle='#ece7dd';
+  x.font='italic 240px Georgia'; x.textAlign='center'; x.textBaseline='alphabetic';
+  x.fillText('Y', 256, 340);
+  const t = new THREE.CanvasTexture(c);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(3.4,3.4),
+    new THREE.MeshBasicMaterial({map:t, transparent:true, opacity:.85}));
+  m.position.set(0, 3.4, END_Z-13.9); scene.add(m);
+})();
+
+/* ---------- dust particles ---------- */
+(function(){
+  const N = 700, pos = new Float32Array(N*3), spd = [];
+  for(let i=0;i<N;i++){
+    pos[i*3]   = (Math.random()-.5)*HALL_W;
+    pos[i*3+1] = Math.random()*WALL_H;
+    pos[i*3+2] = START_Z+5 - Math.random()*(hallLen);
+    spd.push(.05+Math.random()*.12);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos,3));
+  dust = new THREE.Points(geo, new THREE.PointsMaterial({
+    color:0xd8cfbe, size:.02, transparent:true, opacity:.55, depthWrite:false}));
+  dust.userData.spd = spd;
+  scene.add(dust);
+})();
+
+/* ---------- input ---------- */
+let dragging=false, lastY=0, lastX=0, wheelVel=0;
+const hint = document.getElementById('hint');
+function bump(){ hint.classList.add('gone'); }
+
+addEventListener('wheel', e=>{
+  if(focused>=0) return;
+  targetZ -= e.deltaY * .012;
+  clampTarget(); bump();
+},{passive:true});
+
+addEventListener('pointerdown', e=>{ dragging=true; lastY=e.clientY; lastX=e.clientX; document.body.classList.add('dragging'); });
+addEventListener('pointermove', e=>{
+  tYaw  = -(e.clientX/innerWidth - .5) * .5;
+  tPitch = (e.clientY/innerHeight - .5) * .22;
+  if(dragging && focused<0){
+    targetZ += (e.clientY-lastY) * .03;
+    clampTarget();
+    if(Math.abs(e.clientY-lastY)>2) bump();
+  }
+  lastY=e.clientY; lastX=e.clientX;
+});
+addEventListener('pointerup', ()=>{ dragging=false; document.body.classList.remove('dragging'); });
+addEventListener('keydown', e=>{
+  if(e.key==='Escape') unfocus();
+  if(focused<0){
+    if(e.key==='ArrowDown'||e.key==='s'){ targetZ-=3; clampTarget(); bump(); }
+    if(e.key==='ArrowUp'||e.key==='w'){ targetZ+=3; clampTarget(); bump(); }
+  }
+});
+function clampTarget(){ targetZ = Math.max(END_Z, Math.min(START_Z, targetZ)); }
+
+/* click to focus */
+const ray = new THREE.Raycaster(), mouse = new THREE.Vector2();
+let moved = 0;
+addEventListener('pointerdown', e=>{ moved=0; });
+addEventListener('pointermove', e=>{ moved+=Math.abs(e.movementX||0)+Math.abs(e.movementY||0); });
+addEventListener('click', e=>{
+  if(moved>6) return;                       // was a drag
+  if(focused>=0){ unfocus(); return; }
+  mouse.set(e.clientX/innerWidth*2-1, -(e.clientY/innerHeight)*2+1);
+  ray.setFromCamera(mouse, camera);
+  const hits = ray.intersectObjects(paintings.map(p=>p.art));
+  if(hits.length){
+    const p = paintings.find(pp=>pp.art===hits[0].object);
+    focus(p.idx);
+  }
+});
+
+const placard = document.getElementById('placard');
+function focus(i){
+  focused = i;
+  const d = paintings[i].data;
+  placard.querySelector('.t').textContent = d.title;
+  placard.querySelector('.m').textContent = d.medium;
+  placard.querySelector('.p').textContent = d.price;
+  placard.classList.add('show');
+  bump();
+}
+function unfocus(){ focused = -1; placard.classList.remove('show'); }
+
+/* ---------- resize ---------- */
+addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+});
+
+/* ---------- animate ---------- */
+const camPos = new THREE.Vector3(), lookAt = new THREE.Vector3();
+function animate(){
+  requestAnimationFrame(animate);
+  const dt = Math.min(clock.getDelta(), .05);
+  const t = clock.elapsedTime;
+
+  // dust drift
+  const dp = dust.geometry.attributes.position, spd = dust.userData.spd;
+  for(let i=0;i<spd.length;i++){
+    dp.array[i*3+1] += Math.sin(t*.5+i)*.0006 + .0009*spd[i];
+    if(dp.array[i*3+1] > WALL_H) dp.array[i*3+1] = 0;
+  }
+  dp.needsUpdate = true;
+
+  if(focused>=0){
+    focusT = Math.min(1, focusT + dt*2);
+  } else {
+    focusT = Math.max(0, focusT - dt*2);
+  }
+
+  // walk position
+  curZ += (targetZ - curZ) * (1 - Math.pow(.001, dt));
+  let px = 0, py = 2.1, pz = curZ;
+  let lx = 0, ly = 2.3, lz = curZ - 6;
+
+  if(focusT>0){
+    const p = paintings[Math.max(0,focused>=0?focused:lastFocus)];
+    if(focused>=0) lastFocus = focused;
+    const fp = paintings[lastFocus];
+    const wx = fp.group.position.x, wz = fp.group.position.z;
+    // stand ~3.2 in front of the painting
+    const standX = wx - fp.side*3.4;
+    px = px + (standX - px)*focusT;
+    pz = pz + (wz - pz)*focusT;
+    py = 2.1 + (3.1-2.1)*focusT*.6;
+    lx = lx + (wx - lx)*focusT;
+    ly = ly + (3.1 - ly)*focusT;
+    lz = lz + (wz - lz)*focusT;
+  }
+
+  // head sway + parallax
+  yaw += (tYaw - yaw)*.06;
+  pitch += (tPitch - pitch)*.06;
+  const sway = focusT<.5 ? Math.sin(t*1.6)*.02 : 0;
+
+  camPos.set(px + yaw*1.4, py + sway + pitch*-.6, pz);
+  camera.position.copy(camPos);
+  lookAt.set(lx + yaw*4, ly - pitch*3, lz);
+  camera.lookAt(lookAt);
+
+  camLight.position.set(camera.position.x, camera.position.y+.6, camera.position.z+.5);
+
+  // progress
+  document.querySelector('#progress i').style.height =
+    ((START_Z-curZ)/(START_Z-END_Z)*100)+'%';
+
+  renderer.render(scene, camera);
+}
+let lastFocus = 0;
+animate();
+</script>
+</body>
+</html>
