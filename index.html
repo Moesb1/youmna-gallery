@@ -280,11 +280,11 @@ footer a:hover{color:var(--accent)}
 
 /* ---------- toast ---------- */
 .toast{
-  position:fixed;bottom:2rem;left:50%;transform:translate(-50%,150%);z-index:400;
+  position:fixed;bottom:2rem;left:50%;transform:translate(-50%,calc(100% + 2.5rem));z-index:400;
   background:var(--cream);color:var(--ink);font-size:.78rem;letter-spacing:.12em;
-  padding:.85rem 1.6rem;transition:transform .4s cubic-bezier(.2,.8,.2,1);
+  padding:.85rem 1.6rem;transition:transform .4s cubic-bezier(.2,.8,.2,1),visibility .4s;visibility:hidden;
 }
-.toast.show{transform:translate(-50%,0)}
+.toast.show{transform:translate(-50%,0);visibility:visible}
 
 /* ---------- reveal on scroll ---------- */
 .rv{opacity:1;transform:none}
