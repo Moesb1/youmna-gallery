@@ -159,7 +159,7 @@ const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ============================== renderer / scene ============================== */
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x0c0b0a, 0.035);
+scene.fog = new THREE.FogExp2(0x0c0b0a, 0.028);
 scene.fog.color.convertSRGBToLinear();
 const camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, .1, 80);
 
@@ -168,7 +168,7 @@ renderer.setSize(innerWidth, innerHeight);
 renderer.setPixelRatio(LOW ? 1 : Math.min(devicePixelRatio, 1.75));
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 1.18;
 if(!LOW){
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -220,10 +220,10 @@ const texLoader = new THREE.TextureLoader(manager);
 function plasterTexture(size){
   const c = document.createElement('canvas'); c.width=c.height=size;
   const x = c.getContext('2d');
-  x.fillStyle='#191715'; x.fillRect(0,0,size,size);
+  x.fillStyle='#2b2723'; x.fillRect(0,0,size,size);
   const n = size*size/18;
   for(let i=0;i<n;i++){
-    const g = 18 + Math.random()*16;
+    const g = 34 + Math.random()*20;
     x.fillStyle = `rgba(${g+8},${g+5},${g},${Math.random()*.5})`;
     x.fillRect(Math.random()*size, Math.random()*size, 1.5, 1.5);
   }
@@ -249,7 +249,7 @@ function coneTexture(){
   const c = document.createElement('canvas'); c.width=8; c.height=256;
   const x = c.getContext('2d');
   const g = x.createLinearGradient(0,0,0,256);
-  g.addColorStop(0,'rgba(255,248,230,.5)'); g.addColorStop(.55,'rgba(255,248,230,.10)'); g.addColorStop(1,'rgba(255,248,230,0)');
+  g.addColorStop(0,'rgba(255,248,230,.3)'); g.addColorStop(.55,'rgba(255,248,230,.10)'); g.addColorStop(1,'rgba(255,248,230,0)');
   x.fillStyle=g; x.fillRect(0,0,8,256);
   return new THREE.CanvasTexture(c);
 }
@@ -290,8 +290,8 @@ const stripMat = new THREE.MeshBasicMaterial({color:0x2a2620});
   strip.position.set(s*(HALL_W/2-.03), .06, hallMidZ); scene.add(strip);
 });
 
-scene.add(new THREE.AmbientLight(0x8f867a, .14));
-const camLight = new THREE.PointLight(0xece7dd, .4, 12, 2); scene.add(camLight);
+scene.add(new THREE.AmbientLight(0x9a9184, .6));
+const camLight = new THREE.PointLight(0xece7dd, .8, 13, 2); scene.add(camLight);
 const endLight = new THREE.PointLight(0x8fa0b8, .7, 40, 2);
 endLight.position.set(0, 4, END_Z-8); scene.add(endLight);
 
@@ -340,7 +340,7 @@ function buildWork(data, i, opts={}){
 
   const coneH = WALL_H - 3.6;
   const cone = new THREE.Mesh(new THREE.ConeGeometry(1.7*(PW/2.5), coneH, 24, 1, true),
-    new THREE.MeshBasicMaterial({map:coneTex, transparent:true, opacity:.16, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide}));
+    new THREE.MeshBasicMaterial({map:coneTex, transparent:true, opacity:.11, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide}));
   cone.position.set(0, PH/2 + coneH/2 - .4, .5); g.add(cone);
 
   const fixY = PH/2 + coneH - .35;
@@ -357,7 +357,7 @@ function buildWork(data, i, opts={}){
   /* real spotlight with shadow (HIGH) or cheap point light (LOW) */
   let light;
   if(!LOW){
-    light = new THREE.SpotLight(0xf0e8d8, 2.0, 11, .62, .55, 2);
+    light = new THREE.SpotLight(0xf0e8d8, 2.8, 12, .72, .6, 2);
     light.position.set(0, fixY, .5);
     light.target.position.set(0, 0, .1);
     light.castShadow = true;
