@@ -118,7 +118,7 @@ body.low .fx{display:block}
 </div>
 
 <div class="ctl">
-  <button id="sndBtn" aria-pressed="false">♪ Sound</button>
+  <button id="sndBtn" aria-pressed="false">♪ Music</button>
   <button id="motionBtn" style="display:none">◎ Motion</button>
 </div>
 
@@ -161,7 +161,8 @@ const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x0c0b0a, 0.028);
 scene.fog.color.convertSRGBToLinear();
-const camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, .1, 80);
+scene.background = scene.fog.color;   // no void past the draw distance
+const camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, .1, 150);
 
 const renderer = new THREE.WebGLRenderer({antialias:!LOW, powerPreference:'high-performance'});
 renderer.setSize(innerWidth, innerHeight);
@@ -266,7 +267,7 @@ const reflFade = fadeAlphaMap();
 
 /* ============================== room ============================== */
 const wallMat = new THREE.MeshStandardMaterial({map:wallTex, roughness:.94});
-const floorMat = new THREE.MeshStandardMaterial({color:0x0d0c0b, roughness:.32, metalness:.35});
+const floorMat = new THREE.MeshStandardMaterial({color:0x0d0c0b, roughness:.5, metalness:.22});
 const ceilMat = new THREE.MeshStandardMaterial({color:0x0a0908, roughness:1});
 [floorMat, ceilMat].forEach(m=>m.color.convertSRGBToLinear());
 const hallLen = START_Z - END_Z + 30, hallMidZ = (START_Z + END_Z)/2;
@@ -292,8 +293,8 @@ const stripMat = new THREE.MeshBasicMaterial({color:0x2a2620});
 
 scene.add(new THREE.AmbientLight(0x9a9184, .6));
 const camLight = new THREE.PointLight(0xece7dd, .8, 13, 2); scene.add(camLight);
-const endLight = new THREE.PointLight(0x8fa0b8, .7, 40, 2);
-endLight.position.set(0, 4, END_Z-8); scene.add(endLight);
+const endLight = new THREE.PointLight(0x8fa0b8, .22, 24, 2);
+endLight.position.set(0, 5, END_Z-8); scene.add(endLight);
 
 /* ============================== paintings ============================== */
 const frameMat = new THREE.MeshStandardMaterial({color:0x241f19, roughness:.5, metalness:.4});
@@ -429,20 +430,62 @@ const dust = new THREE.Points(dustGeo, new THREE.PointsMaterial({
   color:0xd8cfbe, size:.02, transparent:true, opacity:.55, depthWrite:false}));
 scene.add(dust);
 
-/* ============================== audio (procedural, opt-in) ============================== */
-let AC=null, sndOn=false, masterGain=null, stepPan=1;
+/* ============== audio: synthesized Spanish guitar (opt-in) ============== */
+let AC=null, sndOn=false, masterGain=null, stepPan=1, musicGain=null, nextNote=0, seqPos=0, schedTimer=null;
+
+/* Karplus-Strong plucked string — sounds like a nylon guitar, generated in code */
+function pluck(freq, when, vel, pan){
+  const sr=AC.sampleRate, N=Math.max(2, Math.round(sr/freq));
+  const dur=2.4, buf=AC.createBuffer(1, Math.floor(sr*dur), sr), d=buf.getChannelData(0);
+  const ring=new Float32Array(N);
+  for(let i=0;i<N;i++) ring[i]=Math.random()*2-1;
+  let prev=0;
+  for(let i=0;i<d.length;i++){
+    const j=i%N, cur=ring[j];
+    ring[j]=(cur+prev)*.498;      // lowpass string damping
+    prev=cur; d[i]=cur;
+  }
+  const src=AC.createBufferSource(); src.buffer=buf;
+  const g=AC.createGain(); g.gain.setValueAtTime(vel, when);
+  g.gain.exponentialRampToValueAtTime(.0001, when+dur);
+  if(AC.createStereoPanner){
+    const p=AC.createStereoPanner(); p.pan.value=pan;
+    src.connect(g).connect(p).connect(musicGain);
+  } else src.connect(g).connect(musicGain);
+  src.start(when);
+}
+
+/* Andalusian cadence, Am · G · F · E — fingerpicked, slightly human */
+const CHORDS=[
+  [110.00,164.81,220.00,261.63,329.63],   // Am
+  [ 98.00,146.83,196.00,246.94,293.66],   // G
+  [ 87.31,130.81,174.61,220.00,261.63],   // F
+  [ 82.41,123.47,164.81,207.65,246.94],   // E
+];
+const PATTERN=[0,2,3,4,3,2,1,3];
+function startGuitar(){
+  nextNote=AC.currentTime+.15; seqPos=0;
+  if(schedTimer) clearInterval(schedTimer);
+  schedTimer=setInterval(()=>{
+    if(!sndOn) return;
+    while(nextNote < AC.currentTime + 1.2){
+      const chord=CHORDS[Math.floor(seqPos/8)%CHORDS.length];
+      const note=chord[PATTERN[seqPos%8]];
+      const vel = seqPos%8===0 ? .26 : .12+Math.random()*.05;
+      pluck(note, nextNote+(Math.random()-.5)*.014, vel, seqPos%2? .2 : -.2);
+      nextNote += .3; seqPos++;
+    }
+  }, 250);
+}
+
 function audioInit(){
   if(AC) return;
   AC = new (window.AudioContext||window.webkitAudioContext)();
   masterGain = AC.createGain(); masterGain.gain.value = 1; masterGain.connect(AC.destination);
-  /* room tone: looped brown noise through a dark lowpass */
-  const len = AC.sampleRate*3, buf = AC.createBuffer(1,len,AC.sampleRate), d = buf.getChannelData(0);
-  let last=0;
-  for(let i=0;i<len;i++){ const w=(Math.random()*2-1)*.02; last=(last+w)/1.02; d[i]=last*3.5; }
-  const src = AC.createBufferSource(); src.buffer=buf; src.loop=true;
-  const lp = AC.createBiquadFilter(); lp.type='lowpass'; lp.frequency.value=180;
-  const g = AC.createGain(); g.gain.value=.20;
-  src.connect(lp).connect(g).connect(masterGain); src.start();
+  musicGain = AC.createGain(); musicGain.gain.value=.55;
+  const tone = AC.createBiquadFilter(); tone.type='lowpass'; tone.frequency.value=2600; tone.Q.value=.4;
+  musicGain.connect(tone).connect(masterGain);
+  startGuitar();
 }
 function step(){
   if(!sndOn||!AC) return;
@@ -475,7 +518,7 @@ sndBtn.onclick = ()=>{
   if(AC.state==='suspended') AC.resume();
   sndBtn.classList.toggle('on', sndOn);
   sndBtn.setAttribute('aria-pressed', sndOn);
-  sndBtn.textContent = sndOn ? '♪ Sound on' : '♪ Sound';
+  sndBtn.textContent = sndOn ? '♪ Music on' : '♪ Music';
 };
 
 /* ============================== input ============================== */
