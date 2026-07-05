@@ -159,7 +159,8 @@ const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ============================== renderer / scene ============================== */
 const scene = new THREE.Scene();
-scene.fog = new THREE.FogExp2(0x0c0b0a, 0.045);
+scene.fog = new THREE.FogExp2(0x0c0b0a, 0.035);
+scene.fog.color.convertSRGBToLinear();
 const camera = new THREE.PerspectiveCamera(58, innerWidth/innerHeight, .1, 80);
 
 const renderer = new THREE.WebGLRenderer({antialias:!LOW, powerPreference:'high-performance'});
@@ -192,7 +193,7 @@ const GradeShader = {
       c.rgb *= vec3(1.03, 1.0, 0.96);
       /* vignette */
       float d = distance(vUv, vec2(.5,.46));
-      c.rgb *= smoothstep(.95, .38, d) * .35 + .65;
+      c.rgb *= smoothstep(.98, .35, d) * .45 + .55;
       /* film grain */
       c.rgb += (rnd(vUv*vec2(1920.,1080.) + mod(time,10.)) - .5) * .045;
       gl_FragColor = c;
@@ -228,7 +229,7 @@ function plasterTexture(size){
   }
   for(let i=0;i<size/8;i++){ // macro blotches kill visible tiling (neutral tones only)
     const v = Math.random()>.5 ? 255 : 0;
-    x.fillStyle = `rgba(${v},${v},${Math.round(v*.96)},${Math.random()*.01})`;
+    x.fillStyle = `rgba(${v},${v},${v},${Math.random()*.006})`;
     const r = 30+Math.random()*140, px=Math.random()*size, py=Math.random()*size;
     x.beginPath(); x.arc(px,py,r,0,7); x.fill();
   }
@@ -267,6 +268,7 @@ const reflFade = fadeAlphaMap();
 const wallMat = new THREE.MeshStandardMaterial({map:wallTex, roughness:.94});
 const floorMat = new THREE.MeshStandardMaterial({color:0x0d0c0b, roughness:.32, metalness:.35});
 const ceilMat = new THREE.MeshStandardMaterial({color:0x0a0908, roughness:1});
+[floorMat, ceilMat].forEach(m=>m.color.convertSRGBToLinear());
 const hallLen = START_Z - END_Z + 30, hallMidZ = (START_Z + END_Z)/2;
 function plane(w,h,mat){ const m = new THREE.Mesh(new THREE.PlaneGeometry(w,h), mat); m.receiveShadow = true; return m; }
 
@@ -296,6 +298,7 @@ endLight.position.set(0, 4, END_Z-8); scene.add(endLight);
 /* ============================== paintings ============================== */
 const frameMat = new THREE.MeshStandardMaterial({color:0x241f19, roughness:.5, metalness:.4});
 const matteMat = new THREE.MeshStandardMaterial({color:0xf4f1ea, roughness:.9});
+[frameMat, matteMat, stripMat].forEach(m=>m.color.convertSRGBToLinear());
 const paintings = [];
 
 function commissionCanvas(){
