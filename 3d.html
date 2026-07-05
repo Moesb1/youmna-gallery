@@ -190,7 +190,7 @@ const GradeShader = {
       /* composer targets are linear in r128: encode back to sRGB */
       c.rgb = pow(max(c.rgb, vec3(0.)), vec3(0.4545));
       /* subtle warm grade */
-      c.rgb *= vec3(1.03, 1.0, 0.96);
+      c.rgb *= vec3(1.015, 1.0, 0.985);
       /* vignette */
       float d = distance(vUv, vec2(.5,.46));
       c.rgb *= smoothstep(.98, .35, d) * .45 + .55;
@@ -220,11 +220,11 @@ const texLoader = new THREE.TextureLoader(manager);
 function plasterTexture(size){
   const c = document.createElement('canvas'); c.width=c.height=size;
   const x = c.getContext('2d');
-  x.fillStyle='#2b2723'; x.fillRect(0,0,size,size);
+  x.fillStyle='#232323'; x.fillRect(0,0,size,size);
   const n = size*size/18;
   for(let i=0;i<n;i++){
     const g = 34 + Math.random()*20;
-    x.fillStyle = `rgba(${g+8},${g+5},${g},${Math.random()*.5})`;
+    x.fillStyle = `rgba(${g},${g},${g},${Math.random()*.5})`;
     x.fillRect(Math.random()*size, Math.random()*size, 1.5, 1.5);
   }
   for(let i=0;i<size/8;i++){ // macro blotches kill visible tiling (neutral tones only)
@@ -234,7 +234,7 @@ function plasterTexture(size){
     x.beginPath(); x.arc(px,py,r,0,7); x.fill();
   }
   for(let i=0;i<50;i++){
-    x.strokeStyle = `rgba(255,250,240,${Math.random()*.014})`;
+    x.strokeStyle = `rgba(255,255,255,${Math.random()*.012})`;
     x.lineWidth = 6+Math.random()*22;
     const px = Math.random()*size;
     x.beginPath(); x.moveTo(px,0); x.lineTo(px+(Math.random()-.5)*60,size); x.stroke();
