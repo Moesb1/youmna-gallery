@@ -226,8 +226,9 @@ function plasterTexture(size){
     x.fillStyle = `rgba(${g+8},${g+5},${g},${Math.random()*.5})`;
     x.fillRect(Math.random()*size, Math.random()*size, 1.5, 1.5);
   }
-  for(let i=0;i<size/8;i++){ // macro blotches kill visible tiling
-    x.fillStyle = `rgba(${Math.random()>.5?255:0},250,240,${Math.random()*.012})`;
+  for(let i=0;i<size/8;i++){ // macro blotches kill visible tiling (neutral tones only)
+    const v = Math.random()>.5 ? 255 : 0;
+    x.fillStyle = `rgba(${v},${v},${Math.round(v*.96)},${Math.random()*.01})`;
     const r = 30+Math.random()*140, px=Math.random()*size, py=Math.random()*size;
     x.beginPath(); x.arc(px,py,r,0,7); x.fill();
   }
@@ -239,6 +240,7 @@ function plasterTexture(size){
   }
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.encoding = THREE.sRGBEncoding;
   return t;
 }
 const wallTex = plasterTexture(LOW?512:1024); wallTex.repeat.set(3,1.15);
@@ -335,7 +337,7 @@ function buildWork(data, i, opts={}){
 
   const coneH = WALL_H - 3.6;
   const cone = new THREE.Mesh(new THREE.ConeGeometry(1.7*(PW/2.5), coneH, 24, 1, true),
-    new THREE.MeshBasicMaterial({map:coneTex, transparent:true, opacity:.3, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide}));
+    new THREE.MeshBasicMaterial({map:coneTex, transparent:true, opacity:.16, blending:THREE.AdditiveBlending, depthWrite:false, side:THREE.DoubleSide}));
   cone.position.set(0, PH/2 + coneH/2 - .4, .5); g.add(cone);
 
   const fixY = PH/2 + coneH - .35;
@@ -404,8 +406,9 @@ buildWork({slug:'commission', img:null, title:'A Commission', medium:'A custom o
   x.beginPath(); x.arc(128,128,112,0,Math.PI*2); x.stroke();
   x.fillStyle='#ece7dd'; x.font='italic 120px Georgia'; x.textAlign='center';
   x.fillText('Y', 128, 170);
+  const et = new THREE.CanvasTexture(c); et.encoding = THREE.sRGBEncoding;
   const m = new THREE.Mesh(new THREE.PlaneGeometry(1.5,1.5),
-    new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c), transparent:true, opacity:.8}));
+    new THREE.MeshBasicMaterial({map:et, transparent:true, opacity:.8}));
   m.position.set(0, 6.3, END_Z-13.85); scene.add(m);
 })();
 
