@@ -195,7 +195,7 @@ const GradeShader = {
       float d = distance(vUv, vec2(.5,.46));
       c.rgb *= smoothstep(.98, .35, d) * .45 + .55;
       /* film grain */
-      c.rgb += (rnd(vUv*vec2(1920.,1080.) + mod(time,10.)) - .5) * .045;
+      c.rgb += (rnd(vUv*vec2(1920.,1080.) + mod(time,10.)) - .5) * .028;
       gl_FragColor = c;
     }`
 };
@@ -488,12 +488,13 @@ const clampTarget=()=>{ targetZ=Math.max(END_Z, Math.min(START_Z, targetZ)); };
 addEventListener('wheel', e=>{ if(focused>=0||introT<1) return;
   targetZ -= e.deltaY*.02; clampTarget(); bump(); },{passive:true});
 
-let dragging=false, lastY=0, moved=0;
-addEventListener('pointerdown', e=>{ dragging=true; moved=0; lastY=e.clientY; document.body.classList.add('dragging'); });
+let dragging=false, lastY=0, downX=0, downY=0;
+function markDown(e){ downX=e.clientX; downY=e.clientY; }
+addEventListener('pointerdown', e=>{ dragging=true; markDown(e); lastY=e.clientY; document.body.classList.add('dragging'); });
+addEventListener('mousedown', markDown);
 addEventListener('pointermove', e=>{
   tYaw = -(e.clientX/innerWidth-.5)*.5;
   tPitch = (e.clientY/innerHeight-.5)*.22;
-  moved += Math.abs(e.movementX||0)+Math.abs(e.movementY||0);
   if(dragging && focused<0 && introT>=1){
     targetZ += (e.clientY-lastY)*.03; clampTarget();
     if(Math.abs(e.clientY-lastY)>2) bump();
@@ -537,7 +538,8 @@ function hoverCheck(cx,cy){
 }
 
 addEventListener('click', e=>{
-  if(moved>6 || introT<1) return;
+  const dragDist = Math.hypot(e.clientX-downX, e.clientY-downY);
+  if(dragDist>8 || introT<1) return;
   if(e.target.closest('#placard')||e.target.closest('.ctl')||e.target.closest('.hud')) return;
   if(focused>=0){ unfocus(); return; }
   mouse.set(e.clientX/innerWidth*2-1, -(e.clientY/innerHeight)*2+1);
